@@ -1,9 +1,13 @@
 import flask
-from flask import Flask, request, jsonify
-# from flask_restful import Resource, Api
+import face_recognition
+from flask import Flask, request, jsonify, render_template
+
+from bob_assistant.face.data import FEATURES
+from bob_assistant.face.compare import picture_to_bytes, \
+    verify_user
+
 
 app = Flask(__name__)
-# api = Api(app)
 
 
 @app.route('/')
@@ -11,21 +15,17 @@ def hello():
     """Return a friendly HTTP greeting."""
     return '<h1>Hello Netgural!</h1>'
 
-# class HelloWorld(restful.Resource):
-#     def get(self):
-#         return {'hello': 'Michal'}
 
-
-# api.add_resource(HelloWorld, '/upload')
-
-@app.route('/upload', methods=['POST'])
-def upload():
+@app.route('/verify', methods=['POST'])
+def verify():
     if request.method == 'POST':
         if not 'file' in request.files:
             return jsonify({'error': 'no file'}), 400
+
         img_file = request.files.get('file')
-        img_name = img_name = img_file.filename
-        return img_name
+        img_name = img_file.filename
+        img_file_encoded = face_recognition.face_encodings(img_file)
+        return verify_user(img_file_encoded, FEATURES)
 
 
 @app.errorhandler(404)
