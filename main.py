@@ -1,4 +1,5 @@
-from flask import Flask, request
+import flask
+from flask import Flask, request, jsonify
 # from flask_restful import Resource, Api
 
 app = Flask(__name__)
@@ -17,16 +18,14 @@ def hello():
 
 # api.add_resource(HelloWorld, '/upload')
 
-@app.route('/upload', methods=['GET', 'POST'])
+@app.route('/upload', methods=['POST'])
 def upload():
     if request.method == 'POST':
-        try:
-            imagefile = flask.request.files('imagefile', '')
-            return("Hi Michal!")
-        except Exception as err:
-            return "Error"
-    else:
-        return "cheater"
+        if not 'file' in request.files:
+            return jsonify({'error': 'no file'}), 400
+        img_file = request.files.get('file')
+        img_name = img_name = img_file.filename
+        return img_name
 
 
 @app.errorhandler(404)
