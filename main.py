@@ -3,8 +3,7 @@ import face_recognition
 from flask import Flask, request, jsonify, render_template
 
 from bob_assistant.face.data import FEATURES
-from bob_assistant.face.compare import picture_to_bytes, \
-    verify_user
+from bob_assistant.face.compare import verify_user
 
 
 app = Flask(__name__)
@@ -23,7 +22,6 @@ def verify():
             return jsonify({'error': 'no file'}), 400
 
         img_file = request.files.get('file')
-        img_name = img_file.filename
         img_file_encoded = face_recognition.face_encodings(img_file)
         return verify_user(img_file_encoded, FEATURES)
 
