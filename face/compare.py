@@ -14,7 +14,7 @@ def verify_user(unknown, known_users, tolerance=0.7):
         known = val.get('face_features')
         known = np.frombuffer(known)
         try:
-            if face_recognition.compare_faces(known, unknown, tolerance=tolerance):
+            if face_recognition.compare_faces(known, unknown, tolerance=tolerance)[0]:
                 return val
             else:
                 return {'error': 'unknown user'}
