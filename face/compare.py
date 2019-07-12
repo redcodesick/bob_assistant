@@ -9,20 +9,12 @@ def picture_to_bytes(picture, jitters=1):
     return face_encoding[0].tobytes()
 
 
-def compare_features(unknown_features, known_features, tolerance=0.7):
-    result = face_recognition.compare_faces(known_features,
-                                            unknown_features,
-                                            tolerance=tolerance)
-
-    return result
-
-
-def verify_user(unknown, known_users):
+def verify_user(unknown, known_users, tolerance=0.7):
     for _, val in known_users.items():
         known = val.get('face_features')
         known = np.frombuffer(known)
         try:
-            if compare_features(unknown, known):
+            if face_recognition.compare_faces(known, unknown, tolerance=tolerance):
                 return val
             else:
                 return {'error': 'unknown user'}
