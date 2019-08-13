@@ -1,7 +1,11 @@
-face_recognition_models>=0.3.0
-face_recognition>=1.2.3
-dlib>=19.17.0
+pillow==6.1.0
+opencv-python==4.1.0.25
+keras-vggface>=0.6
+mtcnn>=0.0.9
+numpy==1.17.0
+scipy==1.3.1
+matplotlib==3.1.1
 gunicorn==19.9.0
 Flask==1.0.3
-Werkzeug<0.13.0,>=0.12.0
 flask-restful==0.3.7
+Werkzeug==0.14.0
