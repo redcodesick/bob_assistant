@@ -1,10 +1,14 @@
+import logging
 import flask
 import matplotlib.pyplot as plt
 from io import BytesIO
+from PIL import Image
+import numpy as np
+
 
 from flask import Flask, request, jsonify, render_template
-from face.compare import get_embeddings, verify_user
-
+from face.compare import get_embeddings, verify_user, extract_face
+from face.data import KNOWN_USERS
 
 app = Flask(__name__)
 
@@ -25,11 +29,21 @@ def verify():
         if not 'file' in request.files:
             return jsonify({'error': 'no file'}), 400
 
-        img_file = BytesIO(request.files.get('file').read())
-        # img_name = img_file.filename
-        face = get_embeddings(img_file)
+        img = Image.open(request.files['file'])
+        img = np.array(img)
+        unknown_face = extract_face(img)
 
-        return jsonify(face)
+        unknown_features = get_embeddings(img)
+
+        return verify_user(unknown_features, KNOWN_USERS)
+
+
+# def get_output(filename):
+#     try:
+#         with open(filename, 'rb') as output_file:
+#             return output_file.read().decode(errors="ignore")
+#     except IOError:
+#         return None
 
 
 if __name__ == '__main__':

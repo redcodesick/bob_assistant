@@ -9,9 +9,12 @@ from keras_vggface.vggface import VGGFace
 from keras_vggface.utils import preprocess_input
 
 
-def extract_face(filename, required_size=(224, 224)):
+def extract_face(file_object, required_size=(224, 224)):
     # load image from file
-    pixels = plt.imread(filename)
+    if isinstance(file_object, np.ndarray):
+        pixels = file_object
+    else:
+        pixels = plt.imread(file_object)
     # create the detector, using default weights
     detector = MTCNN()
 
@@ -30,24 +33,23 @@ def extract_face(filename, required_size=(224, 224)):
 # extract faces and calculate face embeddings for a list of photo files
 
 
-def get_embeddings(filenames):
-    # extract faces
-    faces = [extract_face(f) for f in filenames]
-    # convert into an array of samples
-    samples = asarray(faces, 'float32')
+def get_embeddings(face):
     # prepare the face for the model, e.g. center pixels
-    samples = preprocess_input(samples)
+    sample = asarray(face, 'float32')
+    sample = preprocess_input(sample)
+    sample = np.expand_dims(sample, axis=0)
+
     # create a vggface model
     model = VGGFace(include_top=False, input_shape=(224, 224, 3))
     # perform prediction
-    yhat = model.predict(samples)
-    return yhat
+    feature_map = model.predict(sample)
+    return feature_map
 
 
-def is_match(known_embedding, candidate_embedding, thresh=0.5):
+def is_match(known_embedding, candidate_embedding, tolerance=0.5):
     # calculate distance between embeddings
-    score = cosine(known_embedding, candidate_embedding)
-    if score <= thresh:
+    score = cosine(known_embedding.ravel(), candidate_embedding.ravel())
+    if score <= tolerance:
         return True
     else:
         return False
@@ -56,7 +58,7 @@ def is_match(known_embedding, candidate_embedding, thresh=0.5):
 def verify_user(unknown, known_users, tolerance=0.5):
     for _, val in known_users.items():
         known = val.get('face_features')
-        # known = np.frombuffer(known)
+        known = np.frombuffer(known, dtype='float32').reshape((1, 7, 7, 512))
         try:
             if is_match(known, unknown, tolerance=tolerance):
                 return val
