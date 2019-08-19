@@ -61,7 +61,9 @@ def verify_user(unknown, known_users, tolerance=0.5):
         known = np.frombuffer(known, dtype='float32').reshape((1, 7, 7, 512))
         try:
             if is_match(known, unknown, tolerance=tolerance):
-                return val
+                return {'name': val.get('name'),
+                        'surname': val.get('surname'),
+                        'email': val.get('email')}
             else:
                 return {'error': 'unknown user'}
         except ValueError:

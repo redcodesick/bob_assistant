@@ -1,6 +1,7 @@
 
 
-KNOWN_USERS = {'hopf_bifurcation':
+KNOWN_USERS = {
+            'hopf_bifurcation':
                 {'id': 0,
                  'name': 'Michał',
                  'surname': 'Dyzma',

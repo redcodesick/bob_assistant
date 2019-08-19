@@ -31,19 +31,12 @@ def verify():
 
         img = Image.open(request.files['file'])
         img = np.array(img)
+        print(img, flush=True)
         unknown_face = extract_face(img)
-
-        unknown_features = get_embeddings(img)
-
+        print('\n\n unknown_face \n', unknown_face, flush=True)
+        unknown_features = get_embeddings(unknown_face)
+        print('\n\n unknown_features \n', unknown_features, flush=True)
         return verify_user(unknown_features, KNOWN_USERS)
-
-
-# def get_output(filename):
-#     try:
-#         with open(filename, 'rb') as output_file:
-#             return output_file.read().decode(errors="ignore")
-#     except IOError:
-#         return None
 
 
 if __name__ == '__main__':
