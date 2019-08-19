@@ -1,4 +1,5 @@
 from PIL import Image
+import keras
 import numpy as np
 from numpy import expand_dims
 from numpy import asarray
@@ -34,6 +35,7 @@ def extract_face(file_object, required_size=(224, 224)):
 
 
 def get_embeddings(face):
+    keras.backend.clear_session()
     # prepare the face for the model, e.g. center pixels
     sample = asarray(face, 'float32')
     sample = preprocess_input(sample)
