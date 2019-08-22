@@ -4,13 +4,20 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 from PIL import Image
 import numpy as np
-
+import json
+import keras
 
 from flask import Flask, request, jsonify, render_template
 from face.compare import get_embeddings, verify_user, extract_face
 from face.data import KNOWN_USERS
 
 app = Flask(__name__)
+from keras_vggface.vggface import VGGFace
+
+import tensorflow as tf
+keras.backend.clear_session()
+tf.get_default_graph()
+MODEL = VGGFace(include_top=False, input_shape=(224, 224, 3))
 
 
 @app.route('/')
@@ -34,9 +41,9 @@ def verify():
         print(img, flush=True)
         unknown_face = extract_face(img)
         print('\n\n unknown_face \n', unknown_face, flush=True)
-        unknown_features = get_embeddings(unknown_face)
+        unknown_features = get_embeddings(unknown_face, MODEL)
         print('\n\n unknown_features \n', unknown_features, flush=True)
-        return verify_user(unknown_features, KNOWN_USERS)
+        return json.dumps(verify_user(unknown_features, KNOWN_USERS))
 
 
 if __name__ == '__main__':

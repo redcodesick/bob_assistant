@@ -34,15 +34,12 @@ def extract_face(file_object, required_size=(224, 224)):
 # extract faces and calculate face embeddings for a list of photo files
 
 
-def get_embeddings(face):
-    keras.backend.clear_session()
+def get_embeddings(face, model):
     # prepare the face for the model, e.g. center pixels
     sample = asarray(face, 'float32')
     sample = preprocess_input(sample)
     sample = np.expand_dims(sample, axis=0)
 
-    # create a vggface model
-    model = VGGFace(include_top=False, input_shape=(224, 224, 3))
     # perform prediction
     feature_map = model.predict(sample)
     return feature_map
