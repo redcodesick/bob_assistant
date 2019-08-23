@@ -63,7 +63,6 @@ def verify_user(unknown, known_users, tolerance=0.5):
                 return {'name': val.get('name'),
                         'surname': val.get('surname'),
                         'email': val.get('email')}
-            else:
-                return {'error': 'unknown user'}
         except ValueError:
             return {'error': 'Use RGB pictures'}
+    return {'error': 'unknown user'}
