@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from keras_vggface.vggface import VGGFace
 from keras_vggface.utils import preprocess_input
 
+# create the detector, using default weights
+DETECTOR = MTCNN()
 
 def extract_face(file_object, required_size=(224, 224)):
     # load image from file
@@ -16,8 +18,8 @@ def extract_face(file_object, required_size=(224, 224)):
         pixels = file_object
     else:
         pixels = plt.imread(file_object)
-    # create the detector, using default weights
-    detector = MTCNN()
+
+    detector = DETECTOR
 
     results = detector.detect_faces(pixels)
     # extract the bounding box from the first face
