@@ -38,7 +38,6 @@ def verify():
 
         img = Image.open(request.files['file'])
         img = np.array(img)
-        print(img, flush=True)
         unknown_face = extract_face(img)
         print('\n\n unknown_face \n', unknown_face, flush=True)
         unknown_features = get_embeddings(unknown_face, MODEL)
