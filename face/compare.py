@@ -47,24 +47,22 @@ def get_embeddings(face, model):
     return feature_map
 
 
-def is_match(known_embedding, candidate_embedding, tolerance=0.5):
+def calculate_similarity(known_embedding, candidate_embedding):
     # calculate distance between embeddings
-    score = cosine(known_embedding.ravel(), candidate_embedding.ravel())
-    if score <= tolerance:
-        return True
-    else:
-        return False
+    return cosine(known_embedding.ravel(), candidate_embedding.ravel())
 
 
-def verify_user(unknown, known_users, tolerance=0.5):
-    for _, val in known_users.items():
-        known = val.get('face_features')
+def verify_user(unknown, users, tolerance=0.5):
+    users_list = []
+    for user in users:
+        known = user.face_embeddings
         known = np.frombuffer(known, dtype='float32').reshape((1, 7, 7, 512))
         try:
-            if is_match(known, unknown, tolerance=tolerance):
-                return {'name': val.get('name'),
-                        'surname': val.get('surname'),
-                        'email': val.get('email')}
+            score = calculate_similarity(known, unknown)
+            users_list.append((score, user.email))
         except ValueError:
             return {'error': 'Use RGB pictures'}
+    users_list.sort(key= lambda _tuple: _tuple[0])
+    if users_list[0][0] < 0.45:
+        return {'email': users_list[0][1]}
     return {'error': 'unknown user'}

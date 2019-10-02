@@ -1,2 +1,7 @@
 runtime: custom
 env: flex
+beta_settings:
+  cloud_sql_instances: third-fold-242908:europe-west3:face-recognition
+resources:
+  memory_gb: 4
+  cpu: 4

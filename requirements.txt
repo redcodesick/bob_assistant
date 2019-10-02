@@ -33,3 +33,5 @@ tensorflow==1.13.1
 tensorflow-estimator==1.13.0
 termcolor==1.1.0
 Werkzeug==0.14
+Flask-SQLAlchemy==2.4.0
+psycopg2==2.8.3
