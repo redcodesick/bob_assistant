@@ -33,7 +33,7 @@ class User(db.Model):
     email = db.Column(db.String)
     face_embeddings = db.Column(db.LargeBinary)
     photos = db.relationship("Photo", backref='user')
-
+    face_recognition_enabled = db.Column(db.Boolean, default=True)
 
 class Photo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,6 +45,20 @@ def hello():
     """Return a friendly HTTP greeting."""
     return '<h1>Hello Netgural!</h1>'
 
+
+@app.route('/toggle_face_recognition', methods=['POST'])
+def toggle_face_recognition():
+    user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
+    if user:
+        user.face_recognition_enabled = not user.face_recognition_enabled
+        try:
+            db.session.add(user)
+            db.session.commit()
+            return jsonify({'success switching face recognitionn to': user.face_recognition_enabled})
+        except:
+            return jsonify({'error': 'cannot toggle face recognition'}), 500
+    else:
+        return jsonify({'error': 'no user'}), 404
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
@@ -62,7 +76,7 @@ def verify():
         print('\n\n unknown_face \n', unknown_face, flush=True)
         unknown_features = get_embeddings(unknown_face, MODEL)
         print('\n\n unknown_features \n', unknown_features, flush=True)
-        return json.dumps(verify_user(unknown_features, User.query.all()))
+        return json.dumps(verify_user(unknown_features, User.query.filter_by(face_recognition_enabled = True).all()))
 
 @app.route('/post_photo', methods=['POST'])
 def post_photo():
