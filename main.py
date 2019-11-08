@@ -1,24 +1,29 @@
-import logging
-import flask
-import matplotlib.pyplot as plt
-from io import BytesIO
-from PIL import Image
-import numpy as np
 import json
-import keras
-from flask_sqlalchemy import SQLAlchemy
+import logging
+import os
+import hashlib
+from io import BytesIO
 
-from flask import Flask, request, jsonify, render_template
+import flask
+import keras
+import numpy as np
+import tensorflow as tf
+from PIL import Image
+from flask import Flask, jsonify, render_template, request
+from flask_sqlalchemy import SQLAlchemy
+from keras_vggface.vggface import VGGFace
+from matplotlib import pyplot as plt
+from sqlalchemy.exc import SQLAlchemyError
+from google.cloud import storage
+from google.cloud.exceptions import GoogleCloudError
+
+from face.compare import extract_face, get_embeddings, verify_user
+
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = 'postgres+psycopg2://postgres:l8ykgN8GyHrzj25G@/face_recognition?host=/cloudsql/third-fold-242908:europe-west3:face-recognition'
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ['DATABASE_URL']
 db = SQLAlchemy(app)
-
-from face.compare import get_embeddings, verify_user, extract_face
-
-from keras_vggface.vggface import VGGFace
-
-import tensorflow as tf
+BUCKET_NAME = "pictures_bucket"
 keras.backend.clear_session()
 tf.get_default_graph()
 MODEL = VGGFace(include_top=False, input_shape=(224, 224, 3))
@@ -27,8 +32,13 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String)
     face_embeddings = db.Column(db.LargeBinary)
+    photos = db.relationship("Photo", backref='user')
 
-# db.create_all()
+
+class Photo(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    photo_link = db.Column(db.String)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 @app.route('/')
 def hello():
@@ -56,26 +66,50 @@ def verify():
 
 @app.route('/post_photo', methods=['POST'])
 def post_photo():
+
+    def upload_blob(bucket_name, source_file, destination_blob_name):
+        """Uploads a file to the bucket."""
+        storage_client = storage.Client()
+        bucket = storage_client.get_bucket(bucket_name)
+        blob = bucket.blob(destination_blob_name)
+        blob.upload_from_file(source_file)
+
     if not 'file' in request.files:
-        return jsonify({'error': 'no file'}), 400
+        return jsonify({'error': 'No file attached'}), 400
 
     if not 'email' in request.args:
-        return jsonify({'error': 'no email'}), 400
+        return jsonify({'error': 'No email in params'}), 400
 
+    login = request.args.get('login', default='false')
+    photo_path = 'login' if login != 'false' else 'register'
     img = Image.open(request.files['file'])
     img = np.array(img)
     try:
         unknown_face = extract_face(img)
     except ValueError:
-        return jsonify({'error': 'no face'}), 500
+        return jsonify({'error': 'Couldn\'t find face in picture'}), 500
+    photo_name = hashlib.md5(str(img).encode('utf-8')).hexdigest() + '.jpeg'
+    photo_path = os.path.join(photo_path, request.args['email'], photo_name)
+    request.files['file'].seek(0)
+    try:
+        upload_blob(BUCKET_NAME, request.files['file'].stream, photo_path)
+    except GoogleCloudError:
+        return jsonify({'error': 'Couldn\'t save photo in Google Cloud'}), 502
+    photo = Photo(photo_link=photo_path)
+    #  ML part we will change after collecting the photos
     unknown_features = get_embeddings(unknown_face, MODEL)
     user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
     if user:
         user.face_embeddings = unknown_features
     else:
         user = User(email=request.args['email'], face_embeddings=unknown_features.tobytes())
-    db.session.add(user)
-    db.session.commit()
+    user.photos.append(photo)
+    try:
+        db.session.add(user)
+        db.session.add(photo)
+        db.session.commit()
+    except SQLAlchemyError:
+        return jsonify({'error': 'Couldn\'t save photo in database'}), 500
     return jsonify({"success": user.email})
 
 @app.route('/destroy', methods=['DELETE'])
