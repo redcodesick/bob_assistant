@@ -48,17 +48,34 @@ def hello():
 
 @app.route('/toggle_face_recognition', methods=['POST'])
 def toggle_face_recognition():
+
+    if not 'email' in request.args:
+        return jsonify({'error': 'No email in params'}), 400
+
     user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
     if user:
         user.face_recognition_enabled = not user.face_recognition_enabled
         try:
             db.session.add(user)
             db.session.commit()
-            return jsonify({'success switching face recognitionn to': user.face_recognition_enabled})
-        except:
-            return jsonify({'error': 'cannot toggle face recognition'}), 500
+            return jsonify({'Success switching face recognition to': user.face_recognition_enabled})
+        except SQLAlchemyError:
+            return jsonify({'error': 'Cannot toggle face recognition'}), 500
     else:
-        return jsonify({'error': 'no user'}), 404
+        return jsonify({'error': 'No user'}), 404
+
+
+@app.route('/check_face_recognition', methods=['GET'])
+def check_face_recognition():
+
+    if not 'email' in request.args:
+        return jsonify({'error': 'No email in params'}), 400
+
+    user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
+    if user:
+        return jsonify({'Face recognition is set to': user.face_recognition_enabled})
+    else:
+        return jsonify({'error': 'No user'}), 404
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
