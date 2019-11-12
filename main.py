@@ -58,7 +58,7 @@ def toggle_face_recognition():
         try:
             db.session.add(user)
             db.session.commit()
-            return jsonify({'Success switching face recognition to': user.face_recognition_enabled})
+            return jsonify(f'Success switching face recognition to {user.face_recognition_enabled}')
         except SQLAlchemyError:
             return jsonify({'error': 'Cannot toggle face recognition'}), 500
     else:
@@ -73,7 +73,7 @@ def check_face_recognition():
 
     user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
     if user:
-        return jsonify({'Face recognition is set to': user.face_recognition_enabled})
+        return jsonify(f'Face recognition is set to {user.face_recognition_enabled}')
     else:
         return jsonify({'error': 'No user'}), 404
 
