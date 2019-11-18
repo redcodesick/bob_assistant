@@ -14,6 +14,7 @@ from flask_sqlalchemy import SQLAlchemy
 from keras_vggface.vggface import VGGFace
 from matplotlib import pyplot as plt
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import NoResultFound
 from google.cloud import storage
 from google.cloud.exceptions import GoogleCloudError
 
@@ -51,18 +52,17 @@ def toggle_face_recognition():
 
     if not 'email' in request.args:
         return jsonify({'error': 'No email in params'}), 400
-
-    user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
-    if user:
-        user.face_recognition_enabled = not user.face_recognition_enabled
-        try:
-            db.session.add(user)
-            db.session.commit()
-            return jsonify(f'Success switching face recognition to {user.face_recognition_enabled}')
-        except SQLAlchemyError:
-            return jsonify({'error': 'Cannot toggle face recognition'}), 500
-    else:
+    try:
+        user = User.query.filter_by(email=request.args['email']).one()
+    except NoResultFound:
         return jsonify({'error': 'No user'}), 404
+    user.face_recognition_enabled = not user.face_recognition_enabled
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return jsonify(f'Success switching face recognition to {user.face_recognition_enabled}')
+    except SQLAlchemyError:
+        return jsonify({'error': 'Cannot toggle face recognition'}), 500
 
 
 @app.route('/check_face_recognition', methods=['GET'])
@@ -70,12 +70,11 @@ def check_face_recognition():
 
     if not 'email' in request.args:
         return jsonify({'error': 'No email in params'}), 400
-
-    user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
-    if user:
-        return jsonify(f'Face recognition is set to {user.face_recognition_enabled}')
-    else:
+    try:
+        user = User.query.filter_by(email=request.args['email']).one()
+    except NoResultFound:
         return jsonify({'error': 'No user'}), 404
+    return jsonify(f'Face recognition is set to {user.face_recognition_enabled}')
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
@@ -129,11 +128,11 @@ def post_photo():
     photo = Photo(photo_link=photo_path)
     #  ML part we will change after collecting the photos
     unknown_features = get_embeddings(unknown_face, MODEL)
-    user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
-    if user:
-        user.face_embeddings = unknown_features
-    else:
-        user = User(email=request.args['email'], face_embeddings=unknown_features.tobytes())
+    try:
+        user = User.query.filter_by(email=request.args['email']).one()
+    except NoResultFound:
+        user = User(email=request.args['email'])
+    user.face_embeddings = unknown_features
     user.photos.append(photo)
     try:
         db.session.add(user)
