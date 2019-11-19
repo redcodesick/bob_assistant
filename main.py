@@ -14,6 +14,7 @@ from flask_sqlalchemy import SQLAlchemy
 from keras_vggface.vggface import VGGFace
 from matplotlib import pyplot as plt
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.exc import NoResultFound
 from google.cloud import storage
 from google.cloud.exceptions import GoogleCloudError
 
@@ -33,7 +34,7 @@ class User(db.Model):
     email = db.Column(db.String)
     face_embeddings = db.Column(db.LargeBinary)
     photos = db.relationship("Photo", backref='user')
-
+    face_recognition_enabled = db.Column(db.Boolean, default=True)
 
 class Photo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,6 +46,35 @@ def hello():
     """Return a friendly HTTP greeting."""
     return '<h1>Hello Netgural!</h1>'
 
+
+@app.route('/toggle_face_recognition', methods=['POST'])
+def toggle_face_recognition():
+
+    if not 'email' in request.args:
+        return jsonify({'error': 'No email in params'}), 400
+    try:
+        user = User.query.filter_by(email=request.args['email']).one()
+    except NoResultFound:
+        return jsonify({'error': 'No user'}), 404
+    user.face_recognition_enabled = not user.face_recognition_enabled
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return jsonify(f'Success switching face recognition to {user.face_recognition_enabled}')
+    except SQLAlchemyError:
+        return jsonify({'error': 'Cannot toggle face recognition'}), 500
+
+
+@app.route('/check_face_recognition', methods=['GET'])
+def check_face_recognition():
+
+    if not 'email' in request.args:
+        return jsonify({'error': 'No email in params'}), 400
+    try:
+        user = User.query.filter_by(email=request.args['email']).one()
+    except NoResultFound:
+        return jsonify({'error': 'No user'}), 404
+    return jsonify(f'Face recognition is set to {user.face_recognition_enabled}')
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
@@ -62,7 +92,7 @@ def verify():
         print('\n\n unknown_face \n', unknown_face, flush=True)
         unknown_features = get_embeddings(unknown_face, MODEL)
         print('\n\n unknown_features \n', unknown_features, flush=True)
-        return json.dumps(verify_user(unknown_features, User.query.all()))
+        return json.dumps(verify_user(unknown_features, User.query.filter_by(face_recognition_enabled = True).all()))
 
 @app.route('/post_photo', methods=['POST'])
 def post_photo():
@@ -98,11 +128,11 @@ def post_photo():
     photo = Photo(photo_link=photo_path)
     #  ML part we will change after collecting the photos
     unknown_features = get_embeddings(unknown_face, MODEL)
-    user = next(iter(User.query.filter_by(email=request.args['email']).all()), None)
-    if user:
-        user.face_embeddings = unknown_features
-    else:
-        user = User(email=request.args['email'], face_embeddings=unknown_features.tobytes())
+    try:
+        user = User.query.filter_by(email=request.args['email']).one()
+    except NoResultFound:
+        user = User(email=request.args['email'])
+    user.face_embeddings = unknown_features
     user.photos.append(photo)
     try:
         db.session.add(user)
