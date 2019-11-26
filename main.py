@@ -74,7 +74,7 @@ def check_face_recognition():
         user = User.query.filter_by(email=request.args['email']).one()
     except NoResultFound:
         return jsonify({'error': 'No user'}), 404
-    return jsonify(f'Face recognition is set to {user.face_recognition_enabled}')
+    return jsonify({'face_recognition_enabled': user.face_recognition_enabled})
 
 @app.route('/verify', methods=['GET', 'POST'])
 def verify():
